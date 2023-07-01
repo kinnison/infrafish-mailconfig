@@ -4,7 +4,7 @@ use axum::Router;
 use configuration::Configuration;
 use mailconfig::{apply_migrations, create_pool};
 use state::AppState;
-use tracing::info;
+use tracing::{info, warn};
 use tracing_subscriber::{filter::LevelFilter, fmt, prelude::*, EnvFilter};
 
 mod api;
@@ -13,8 +13,6 @@ mod state;
 
 #[tokio::main]
 async fn main() {
-    dotenv::dotenv().unwrap();
-
     tracing_subscriber::registry()
         .with(fmt::layer())
         .with(
@@ -24,6 +22,12 @@ async fn main() {
                 .from_env_lossy(),
         )
         .init();
+
+    if dotenv::dotenv().is_ok() {
+        info!("Loaded configuration from .env file");
+    } else {
+        warn!("No .env file detected, configuration only from process environment");
+    }
 
     let config = Configuration::load().expect("Unable to load config from environment:");
 
