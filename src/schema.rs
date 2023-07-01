@@ -11,6 +11,7 @@ diesel::table! {
         id -> Int4,
         owner -> Int4,
         domainname -> Varchar,
+        remotemx -> Nullable<Varchar>,
     }
 }
 

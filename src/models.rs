@@ -21,6 +21,7 @@ pub struct MailDomain {
     pub id: i32,
     pub owner: i32,
     pub domainname: String,
+    pub remotemx: Option<String>,
 }
 
 #[derive(Insertable)]
@@ -29,6 +30,7 @@ pub struct NewMailDomain<'a> {
     pub id: i32,
     pub owner: i32,
     pub domainname: &'a str,
+    pub remotemx: Option<&'a str>,
 }
 
 #[derive(Queryable)]
