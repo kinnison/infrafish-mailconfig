@@ -6,3 +6,22 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
+axum = { version = "0.6.18", features = ["tracing", "http2", "macros"] }
+bb8 = "0.8.1"
+config = "0.13.3"
+diesel = { version = "2.1.0", features = ["postgres"] }
+diesel-async = { version = "0.3.1", features = ["bb8", "postgres"] }
+diesel_migrations = { version = "2.1.0", features = ["postgres"] }
+dotenv = "0.15.0"
+futures = "0.3.28"
+git-testament = "0.2.4"
+lazy_static = "1.4.0"
+rustls = "0.21.2"
+serde = { version = "1.0.164", features = ["derive"] }
+tokio = { version = "1.28.2", features = ["full"] }
+tokio-postgres = "0.7.8"
+tokio-postgres-rustls = "0.10.0"
+tracing = "0.1.37"
+tracing-subscriber = { version = "0.3.17", features = ["env-filter", "tracing"] }
+url = { version = "2.4.0", features = ["serde"] }
+webpki-roots = "0.23.1"
