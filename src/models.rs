@@ -12,7 +12,6 @@ pub struct MailUser {
 #[derive(Insertable)]
 #[diesel(table_name = crate::schema::mailuser)]
 pub struct NewMailUser<'a> {
-    pub id: i32,
     pub username: &'a str,
 }
 
@@ -27,7 +26,6 @@ pub struct MailDomain {
 #[derive(Insertable)]
 #[diesel(table_name = crate::schema::maildomain)]
 pub struct NewMailDomain<'a> {
-    pub id: i32,
     pub owner: i32,
     pub domainname: &'a str,
     pub remotemx: Option<&'a str>,
@@ -46,10 +44,25 @@ pub struct MailEntry {
 #[derive(Insertable)]
 #[diesel(table_name=crate::schema::mailentry)]
 pub struct NewMailEntry<'a> {
-    pub id: i32,
     pub maildomain: i32,
     pub name: &'a str,
     pub kind: MailEntryKind,
     pub password: Option<&'a str>,
     pub expansion: Option<&'a str>,
+}
+
+#[derive(Queryable)]
+pub struct AllowDenyList {
+    pub id: i32,
+    pub maildomain: i32,
+    pub allow: bool,
+    pub value: String,
+}
+
+#[derive(Insertable)]
+#[diesel(table_name=crate::schema::allowdenylist)]
+pub struct NewAllowDenyList<'a> {
+    pub maildomain: i32,
+    pub allow: bool,
+    pub value: &'a str,
 }

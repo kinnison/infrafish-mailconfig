@@ -7,6 +7,15 @@ pub mod sql_types {
 }
 
 diesel::table! {
+    allowdenylist (id) {
+        id -> Int4,
+        maildomain -> Int4,
+        allow -> Bool,
+        value -> Varchar,
+    }
+}
+
+diesel::table! {
     maildomain (id) {
         id -> Int4,
         owner -> Int4,
@@ -36,10 +45,12 @@ diesel::table! {
     }
 }
 
+diesel::joinable!(allowdenylist -> maildomain (maildomain));
 diesel::joinable!(maildomain -> mailuser (owner));
 diesel::joinable!(mailentry -> maildomain (maildomain));
 
 diesel::allow_tables_to_appear_in_same_query!(
+    allowdenylist,
     maildomain,
     mailentry,
     mailuser,
