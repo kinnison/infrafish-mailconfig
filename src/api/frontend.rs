@@ -13,7 +13,7 @@ use super::APIResult;
 #[derive(Serialize)]
 struct FrontendJson {
     version: String,
-    all_domains: Vec<String>,
+    all_domains: String,
     per_domain: HashMap<String, FrontendJsonDomain>,
 }
 
@@ -35,7 +35,8 @@ async fn get_json(
     let all_domains = all_mail_domains
         .iter()
         .map(|d| d.domainname.clone())
-        .collect();
+        .collect::<Vec<_>>()
+        .join(" : ");
     let mut per_domain = HashMap::new();
 
     for domain in all_mail_domains {
