@@ -21,6 +21,10 @@ pub struct MailDomain {
     pub owner: i32,
     pub domainname: String,
     pub remotemx: Option<String>,
+    pub sender_verify: bool,
+    pub grey_listing: bool,
+    pub virus_check: bool,
+    pub spamcheck_threshold: i32,
 }
 
 #[derive(Insertable)]
@@ -29,6 +33,10 @@ pub struct NewMailDomain<'a> {
     pub owner: i32,
     pub domainname: &'a str,
     pub remotemx: Option<&'a str>,
+    pub sender_verify: bool,
+    pub grey_listing: bool,
+    pub virus_check: bool,
+    pub spamcheck_threshold: i32,
 }
 
 #[derive(Queryable)]

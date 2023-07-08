@@ -21,6 +21,10 @@ diesel::table! {
         owner -> Int4,
         domainname -> Varchar,
         remotemx -> Nullable<Varchar>,
+        sender_verify -> Bool,
+        grey_listing -> Bool,
+        virus_check -> Bool,
+        spamcheck_threshold -> Int4,
     }
 }
 
