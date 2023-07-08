@@ -1,7 +1,10 @@
 pub mod sql_types;
 
-use diesel::{Insertable, Queryable};
+use diesel::{ExpressionMethods, Insertable, QueryDsl, QueryResult, Queryable};
+use diesel_async::{AsyncPgConnection, RunQueryDsl};
 pub use sql_types::MailEntryKind;
+
+// These types need to match up with the schema
 
 #[derive(Queryable)]
 pub struct MailUser {
@@ -73,4 +76,43 @@ pub struct NewAllowDenyList<'a> {
     pub maildomain: i32,
     pub allow: bool,
     pub value: &'a str,
+}
+
+// Below here are the implementations
+
+impl MailDomain {
+    pub async fn get_all(db: &mut AsyncPgConnection) -> QueryResult<Vec<Self>> {
+        use crate::schema::maildomain::dsl;
+        dsl::maildomain.get_results(db).await
+    }
+}
+
+impl AllowDenyList {
+    pub async fn all_allows(
+        db: &mut AsyncPgConnection,
+        maildomain: i32,
+    ) -> QueryResult<Vec<String>> {
+        use crate::schema::allowdenylist::dsl;
+
+        dsl::allowdenylist
+            .filter(dsl::maildomain.eq(maildomain))
+            .filter(dsl::allow.eq(true))
+            .get_results(db)
+            .await
+            .map(|v| v.into_iter().map(|adv: Self| adv.value).collect())
+    }
+
+    pub async fn all_denys(
+        db: &mut AsyncPgConnection,
+        maildomain: i32,
+    ) -> QueryResult<Vec<String>> {
+        use crate::schema::allowdenylist::dsl;
+
+        dsl::allowdenylist
+            .filter(dsl::maildomain.eq(maildomain))
+            .filter(dsl::allow.eq(false))
+            .get_results(db)
+            .await
+            .map(|v| v.into_iter().map(|adv: Self| adv.value).collect())
+    }
 }

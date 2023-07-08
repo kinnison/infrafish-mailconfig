@@ -91,3 +91,56 @@ pub async fn create_pool(db_url: &str) -> Result<Pool, PoolError> {
         .build(config)
         .await
 }
+
+pub use axum_link::Connection;
+
+pub mod axum_link {
+    use std::ops::{Deref, DerefMut};
+
+    use async_trait::async_trait;
+    use axum::{
+        extract::{FromRef, FromRequestParts},
+        http::{request::Parts, StatusCode},
+    };
+    use diesel_async::{pooled_connection::bb8, AsyncPgConnection};
+
+    use super::Pool;
+
+    pub struct Connection(bb8::PooledConnection<'static, AsyncPgConnection>);
+
+    #[async_trait]
+    impl<S> FromRequestParts<S> for Connection
+    where
+        Pool: FromRef<S>,
+        S: Send + Sync,
+    {
+        type Rejection = (StatusCode, String);
+
+        #[tracing::instrument(name = "acquire_connection", skip_all)]
+        async fn from_request_parts(
+            _parts: &mut Parts,
+            state: &S,
+        ) -> Result<Self, Self::Rejection> {
+            let pool = Pool::from_ref(state);
+            let conn = pool
+                .get_owned()
+                .await
+                .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
+            Ok(Self(conn))
+        }
+    }
+
+    impl Deref for Connection {
+        type Target = AsyncPgConnection;
+
+        fn deref(&self) -> &Self::Target {
+            &self.0
+        }
+    }
+
+    impl DerefMut for Connection {
+        fn deref_mut(&mut self) -> &mut Self::Target {
+            &mut self.0
+        }
+    }
+}
