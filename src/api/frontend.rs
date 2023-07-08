@@ -1,6 +1,6 @@
 //! Frontend configuration
 
-use std::collections::HashMap;
+use std::collections::BTreeMap;
 
 use axum::{extract::State, routing::get, Json, Router};
 use mailconfig::{models, Connection};
@@ -14,7 +14,7 @@ use super::APIResult;
 struct FrontendJson {
     version: String,
     all_domains: String,
-    per_domain: HashMap<String, FrontendJsonDomain>,
+    per_domain: BTreeMap<String, FrontendJsonDomain>,
 }
 
 #[derive(Serialize)]
@@ -37,7 +37,7 @@ async fn get_json(
         .map(|d| d.domainname.clone())
         .collect::<Vec<_>>()
         .join(" : ");
-    let mut per_domain = HashMap::new();
+    let mut per_domain = BTreeMap::new();
 
     for domain in all_mail_domains {
         let fedom = FrontendJsonDomain {

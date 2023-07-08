@@ -83,7 +83,10 @@ pub struct NewAllowDenyList<'a> {
 impl MailDomain {
     pub async fn get_all(db: &mut AsyncPgConnection) -> QueryResult<Vec<Self>> {
         use crate::schema::maildomain::dsl;
-        dsl::maildomain.get_results(db).await
+        dsl::maildomain
+            .order_by(dsl::domainname.asc())
+            .get_results(db)
+            .await
     }
 }
 
@@ -97,6 +100,7 @@ impl AllowDenyList {
         dsl::allowdenylist
             .filter(dsl::maildomain.eq(maildomain))
             .filter(dsl::allow.eq(true))
+            .order_by(dsl::value.asc())
             .get_results(db)
             .await
             .map(|v| v.into_iter().map(|adv: Self| adv.value).collect())
@@ -111,6 +115,7 @@ impl AllowDenyList {
         dsl::allowdenylist
             .filter(dsl::maildomain.eq(maildomain))
             .filter(dsl::allow.eq(false))
+            .order_by(dsl::value.asc())
             .get_results(db)
             .await
             .map(|v| v.into_iter().map(|adv: Self| adv.value).collect())
