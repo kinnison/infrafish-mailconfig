@@ -299,7 +299,7 @@ impl MailDomainKey {
     }
 
     pub fn render_pubkey(&self) -> String {
-        format!("v=dkim1; k=rsa; p={pubkey}", pubkey = &self.pubkey)
+        format!("v=DKIM1; k=rsa; p={pubkey}", pubkey = &self.pubkey)
     }
 
     pub async fn create(
