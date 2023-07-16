@@ -9,7 +9,8 @@ use tracing_subscriber::{filter::LevelFilter, fmt, prelude::*, EnvFilter};
 
 mod api;
 mod configuration;
-mod state;
+pub mod state;
+pub mod tokens;
 
 #[tokio::main]
 async fn main() {
@@ -41,9 +42,10 @@ async fn main() {
         .await
         .expect("Unable to estable database pool");
 
-    let app = Router::new().nest("/api", api::router());
     let port = config.port();
-    let app = app.with_state(AppState::new(config, pool));
+    let state = AppState::new(config, pool);
+    let app = Router::new().nest("/api", api::router(&state));
+    let app = app.with_state(state);
 
     let addr: SocketAddr = format!("127.0.0.1:{port}").parse().unwrap();
     info!("Starting server on {addr}...");

@@ -1,5 +1,7 @@
 pub mod sql_types;
 
+use diesel::dsl::sql;
+use diesel::prelude::*;
 use diesel::{ExpressionMethods, Insertable, QueryDsl, QueryResult, Queryable};
 use diesel_async::{AsyncPgConnection, RunQueryDsl};
 pub use sql_types::MailEntryKind;
@@ -135,5 +137,56 @@ impl AllowDenyList {
             .get_results(db)
             .await
             .map(|v| v.into_iter().map(|adv: Self| adv.value).collect())
+    }
+}
+
+impl MailAuthToken {
+    pub async fn by_token(db: &mut AsyncPgConnection, token: &str) -> QueryResult<Option<Self>> {
+        use crate::schema::mailauthtoken::dsl;
+
+        dsl::mailauthtoken
+            .filter(dsl::token.eq(token))
+            .first(db)
+            .await
+            .optional()
+    }
+
+    pub async fn by_owner(db: &mut AsyncPgConnection, owner: i32) -> QueryResult<Vec<Self>> {
+        use crate::schema::mailauthtoken::dsl;
+
+        dsl::mailauthtoken
+            .filter(dsl::mailuser.eq(owner))
+            .get_results(db)
+            .await
+    }
+
+    pub async fn create(db: &mut AsyncPgConnection, owner: i32, label: &str) -> QueryResult<Self> {
+        use crate::schema::mailauthtoken::dsl;
+
+        diesel::insert_into(dsl::mailauthtoken)
+            .values((
+                dsl::mailuser.eq(owner),
+                dsl::label.eq(label),
+                dsl::token.eq(sql("md5(gen_random_uuid()::varchar)")),
+            ))
+            .get_result(db)
+            .await
+    }
+
+    pub async fn delete_self(self, db: &mut AsyncPgConnection) -> QueryResult<()> {
+        use crate::schema::mailauthtoken::dsl;
+
+        diesel::delete(dsl::mailauthtoken)
+            .filter(dsl::id.eq(self.id))
+            .execute(db)
+            .await
+            .map(|_| ())
+    }
+}
+
+impl MailUser {
+    pub async fn by_id(db: &mut AsyncPgConnection, id: i32) -> QueryResult<Self> {
+        use crate::schema::mailuser::dsl;
+        dsl::mailuser.filter(dsl::id.eq(id)).first(db).await
     }
 }
