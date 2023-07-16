@@ -16,6 +16,15 @@ diesel::table! {
 }
 
 diesel::table! {
+    mailauthtoken (id) {
+        id -> Int4,
+        mailuser -> Int4,
+        token -> Varchar,
+        label -> Varchar,
+    }
+}
+
+diesel::table! {
     maildomain (id) {
         id -> Int4,
         owner -> Int4,
@@ -50,11 +59,13 @@ diesel::table! {
 }
 
 diesel::joinable!(allowdenylist -> maildomain (maildomain));
+diesel::joinable!(mailauthtoken -> mailuser (mailuser));
 diesel::joinable!(maildomain -> mailuser (owner));
 diesel::joinable!(mailentry -> maildomain (maildomain));
 
 diesel::allow_tables_to_appear_in_same_query!(
     allowdenylist,
+    mailauthtoken,
     maildomain,
     mailentry,
     mailuser,

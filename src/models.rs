@@ -78,6 +78,22 @@ pub struct NewAllowDenyList<'a> {
     pub value: &'a str,
 }
 
+#[derive(Queryable)]
+pub struct MailAuthToken {
+    pub id: i32,
+    pub mailuser: i32,
+    pub token: String,
+    pub label: String,
+}
+
+#[derive(Insertable)]
+#[diesel(table_name=crate::schema::mailauthtoken)]
+pub struct NewMailAuthToken<'a> {
+    pub mailuser: i32,
+    pub token: &'a str,
+    pub label: &'a str,
+}
+
 // Below here are the implementations
 
 impl MailDomain {
