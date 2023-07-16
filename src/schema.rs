@@ -38,6 +38,17 @@ diesel::table! {
 }
 
 diesel::table! {
+    maildomainkey (id) {
+        id -> Int4,
+        maildomain -> Int4,
+        selector -> Varchar,
+        privkey -> Text,
+        pubkey -> Text,
+        signing -> Bool,
+    }
+}
+
+diesel::table! {
     use diesel::sql_types::*;
     use super::sql_types::Mailentrykind;
 
@@ -61,12 +72,14 @@ diesel::table! {
 diesel::joinable!(allowdenylist -> maildomain (maildomain));
 diesel::joinable!(mailauthtoken -> mailuser (mailuser));
 diesel::joinable!(maildomain -> mailuser (owner));
+diesel::joinable!(maildomainkey -> maildomain (maildomain));
 diesel::joinable!(mailentry -> maildomain (maildomain));
 
 diesel::allow_tables_to_appear_in_same_query!(
     allowdenylist,
     mailauthtoken,
     maildomain,
+    maildomainkey,
     mailentry,
     mailuser,
 );

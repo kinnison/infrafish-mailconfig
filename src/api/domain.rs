@@ -15,6 +15,8 @@ use crate::{
 
 use super::APIResult;
 
+mod keys;
+
 #[derive(Serialize)]
 struct ListDomainResponse {
     domains: BTreeMap<String, ListDomainResponseEntry>,
@@ -122,5 +124,6 @@ pub fn router(state: &AppState) -> Router<AppState> {
     Router::new()
         .route("/list", get(list_domains))
         .route("/set-flags", post(set_domain_flags))
+        .nest("/key", keys::router())
         .authorise(state.clone())
 }

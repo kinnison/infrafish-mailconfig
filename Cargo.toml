@@ -8,6 +8,7 @@ edition = "2021"
 [dependencies]
 async-trait = "0.1.71"
 axum = { version = "0.6.18", features = ["tracing", "http2", "macros"] }
+base64 = "0.21.2"
 bb8 = "0.8.1"
 config = "0.13.3"
 diesel = { version = "2.1.0", features = ["postgres"] }
@@ -17,6 +18,8 @@ dotenv = "0.15.0"
 futures = "0.3.28"
 git-testament = "0.2.4"
 lazy_static = "1.4.0"
+rand = "0.8.5"
+rsa = "0.9.2"
 rustls = "0.21.2"
 serde = { version = "1.0.164", features = ["derive"] }
 thiserror = "1.0.43"

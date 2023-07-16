@@ -1,4 +1,5 @@
 pub mod sql_types;
+mod util;
 
 use diesel::dsl::sql;
 use diesel::prelude::*;
@@ -94,6 +95,26 @@ pub struct NewMailAuthToken<'a> {
     pub mailuser: i32,
     pub token: &'a str,
     pub label: &'a str,
+}
+
+#[derive(Queryable)]
+pub struct MailDomainKey {
+    pub id: i32,
+    pub maildomain: i32,
+    pub selector: String,
+    pub privkey: String,
+    pub pubkey: String,
+    pub signing: bool,
+}
+
+#[derive(Insertable)]
+#[diesel(table_name=crate::schema::maildomainkey)]
+pub struct NewMailDomainKey<'a> {
+    pub maildomain: i32,
+    pub selector: &'a str,
+    pub privkey: &'a str,
+    pub pubkey: &'a str,
+    pub signing: bool,
 }
 
 // Below here are the implementations
@@ -234,5 +255,84 @@ impl MailUser {
     pub async fn by_id(db: &mut AsyncPgConnection, id: i32) -> QueryResult<Self> {
         use crate::schema::mailuser::dsl;
         dsl::mailuser.filter(dsl::id.eq(id)).first(db).await
+    }
+}
+
+impl MailDomainKey {
+    pub async fn by_domain(db: &mut AsyncPgConnection, maildomain: i32) -> QueryResult<Vec<Self>> {
+        use crate::schema::maildomainkey::dsl;
+
+        dsl::maildomainkey
+            .filter(dsl::maildomain.eq(maildomain))
+            .order_by(dsl::selector.asc())
+            .get_results(db)
+            .await
+    }
+
+    pub async fn by_domain_and_selector(
+        db: &mut AsyncPgConnection,
+        maildomain: i32,
+        selector: &str,
+    ) -> QueryResult<Option<Self>> {
+        use crate::schema::maildomainkey::dsl;
+
+        dsl::maildomainkey
+            .filter(dsl::maildomain.eq(maildomain))
+            .filter(dsl::selector.eq(selector))
+            .first(db)
+            .await
+            .optional()
+    }
+
+    pub async fn save(&self, db: &mut AsyncPgConnection) -> QueryResult<()> {
+        use crate::schema::maildomainkey::dsl;
+
+        diesel::update(dsl::maildomainkey)
+            .filter(dsl::id.eq(self.id))
+            .set((
+                dsl::selector.eq(&self.selector),
+                dsl::signing.eq(self.signing),
+            ))
+            .execute(db)
+            .await
+            .map(|_| ())
+    }
+
+    pub fn render_pubkey(&self) -> String {
+        format!("v=dkim1; k=rsa; p={pubkey}", pubkey = &self.pubkey)
+    }
+
+    pub async fn create(
+        db: &mut AsyncPgConnection,
+        maildomain: i32,
+        selector: &str,
+        signing: bool,
+    ) -> QueryResult<Self> {
+        use crate::schema::maildomainkey::dsl;
+
+        let (privkey, pubkey) = util::create_dkim_pair()?;
+
+        let newkey = NewMailDomainKey {
+            maildomain,
+            selector,
+            privkey: &privkey,
+            pubkey: &pubkey,
+            signing,
+        };
+
+        diesel::insert_into(dsl::maildomainkey)
+            .values(newkey)
+            .get_result(db)
+            .await
+    }
+
+    pub async fn delete_self(self, db: &mut AsyncPgConnection) -> QueryResult<()> {
+        use crate::schema::maildomainkey::dsl;
+
+        diesel::delete(dsl::maildomainkey)
+            .filter(dsl::id.eq(self.id))
+            .execute(db)
+            .await
+            .map(|_| ())
     }
 }
