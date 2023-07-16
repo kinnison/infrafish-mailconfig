@@ -45,6 +45,7 @@ async fn list_tokens(
 }
 
 #[derive(Deserialize)]
+#[serde(deny_unknown_fields)]
 struct CreateTokenRequest {
     label: String,
 }
@@ -67,6 +68,7 @@ async fn create_token(
 }
 
 #[derive(Deserialize)]
+#[serde(deny_unknown_fields)]
 struct RevokeTokenRequest {
     token: String,
 }

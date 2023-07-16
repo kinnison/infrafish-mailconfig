@@ -1,14 +1,19 @@
-use axum::{extract::State, response::IntoResponse, routing::get, Json, Router};
+use axum::{extract::State, http::StatusCode, response::IntoResponse, routing::get, Json, Router};
 use serde::Serialize;
 use thiserror::Error;
 
 use crate::{configuration::Configuration, state::AppState};
 
+mod domain;
 mod frontend;
 mod tokens;
 
 #[derive(Error, Debug)]
 pub enum APIError {
+    #[error("Entry not found: {0}")]
+    NotFound(String),
+    #[error("Permission denied accessing: {0}")]
+    PermissionDenied(String),
     #[error("Database failure: {0}")]
     DatabaseError(#[from] diesel::result::Error),
     #[error("Authentication failed, no token provided")]
@@ -25,6 +30,8 @@ pub type APIResult<T> = std::result::Result<T, APIError>;
 
 #[derive(Serialize)]
 enum APIResponseError {
+    NotFound(String),
+    PermissionDenied(String),
     DatabaseError(String),
     AuthenticationFailure(String),
     TokenInUse(String),
@@ -39,6 +46,8 @@ impl From<APIError> for APIResponseError {
             e @ APIError::AuthErrorBadToken(_) => Self::AuthenticationFailure(e.to_string()),
             e @ APIError::AuthErrorTokenInUse(_) => Self::TokenInUse(e.to_string()),
             e @ APIError::BadToken(_) => Self::BadToken(e.to_string()),
+            APIError::NotFound(e) => Self::NotFound(e),
+            APIError::PermissionDenied(e) => Self::PermissionDenied(e),
         }
     }
 }
@@ -50,7 +59,12 @@ struct ErrorOutcome {
 
 impl IntoResponse for APIError {
     fn into_response(self) -> axum::response::Response {
-        Json::from(ErrorOutcome { error: self.into() }).into_response()
+        let error = APIResponseError::from(self);
+        match error {
+            APIResponseError::NotFound(e) => (StatusCode::NOT_FOUND, e).into_response(),
+            APIResponseError::PermissionDenied(e) => (StatusCode::FORBIDDEN, e).into_response(),
+            error => Json::from(ErrorOutcome { error }).into_response(),
+        }
     }
 }
 
@@ -70,4 +84,5 @@ pub fn router(state: &AppState) -> Router<AppState> {
         .route("/ping", get(get_ping))
         .nest("/frontend", frontend::router())
         .nest("/token", tokens::router(state))
+        .nest("/domain", domain::router(state))
 }

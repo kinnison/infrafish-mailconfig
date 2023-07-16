@@ -106,6 +106,52 @@ impl MailDomain {
             .get_results(db)
             .await
     }
+
+    pub async fn by_owner(db: &mut AsyncPgConnection, owner: i32) -> QueryResult<Vec<Self>> {
+        use crate::schema::maildomain::dsl;
+
+        dsl::maildomain
+            .filter(dsl::owner.eq(owner))
+            .order_by(dsl::domainname.asc())
+            .get_results(db)
+            .await
+    }
+
+    pub async fn by_name(db: &mut AsyncPgConnection, name: &str) -> QueryResult<Option<Self>> {
+        use crate::schema::maildomain::dsl;
+
+        dsl::maildomain
+            .filter(dsl::domainname.eq(name))
+            .get_result(db)
+            .await
+            .optional()
+    }
+
+    pub async fn may_access(
+        &self,
+        _db: &mut AsyncPgConnection,
+        authuser: i32,
+    ) -> QueryResult<bool> {
+        Ok(self.owner == authuser)
+    }
+
+    pub async fn save(&self, db: &mut AsyncPgConnection) -> QueryResult<()> {
+        use crate::schema::maildomain::dsl;
+
+        diesel::update(dsl::maildomain)
+            .filter(dsl::id.eq(self.id))
+            .set((
+                dsl::domainname.eq(&self.domainname),
+                dsl::remotemx.eq(self.remotemx.as_deref()),
+                dsl::grey_listing.eq(self.grey_listing),
+                dsl::sender_verify.eq(self.sender_verify),
+                dsl::spamcheck_threshold.eq(self.spamcheck_threshold),
+                dsl::virus_check.eq(self.virus_check),
+            ))
+            .execute(db)
+            .await
+            .map(|_| ())
+    }
 }
 
 impl AllowDenyList {
