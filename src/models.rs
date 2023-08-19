@@ -7,6 +7,8 @@ use diesel::{ExpressionMethods, Insertable, QueryDsl, QueryResult, Queryable};
 use diesel_async::{AsyncPgConnection, RunQueryDsl};
 pub use sql_types::MailEntryKind;
 
+use crate::models::util::encode_password;
+
 pub use self::util::Authorisation;
 
 // These types need to match up with the schema
@@ -215,6 +217,83 @@ impl MailDomain {
             .order_by(dsl::name.desc())
             .get_results(db)
             .await
+    }
+
+    pub async fn entry_by_name(
+        &self,
+        db: &mut AsyncPgConnection,
+        entry: &str,
+    ) -> QueryResult<Option<MailEntry>> {
+        use crate::schema::mailentry::dsl;
+
+        dsl::mailentry
+            .filter(dsl::maildomain.eq(self.id))
+            .filter(dsl::name.eq(entry))
+            .first(db)
+            .await
+            .optional()
+    }
+
+    pub async fn new_login(
+        &self,
+        db: &mut AsyncPgConnection,
+        name: &str,
+        password: &str,
+        has_account: bool,
+    ) -> QueryResult<()> {
+        let password = encode_password(password);
+        let new_entry = NewMailEntry {
+            maildomain: self.id,
+            name,
+            kind: if has_account {
+                MailEntryKind::Account
+            } else {
+                MailEntryKind::Login
+            },
+            password: Some(&password),
+            expansion: None,
+        };
+
+        use crate::schema::mailentry::dsl;
+        diesel::insert_into(dsl::mailentry)
+            .values(new_entry)
+            .execute(db)
+            .await
+            .map(|_| ())
+    }
+
+    pub async fn new_alias(
+        &self,
+        db: &mut AsyncPgConnection,
+        name: &str,
+        expansion: &str,
+    ) -> QueryResult<()> {
+        let new_entry = NewMailEntry {
+            maildomain: self.id,
+            name,
+            kind: MailEntryKind::Alias,
+            password: None,
+            expansion: Some(expansion),
+        };
+
+        use crate::schema::mailentry::dsl;
+        diesel::insert_into(dsl::mailentry)
+            .values(new_entry)
+            .execute(db)
+            .await
+            .map(|_| ())
+    }
+}
+
+impl MailEntry {
+    pub async fn delete(&self, db: &mut AsyncPgConnection) -> QueryResult<()> {
+        use crate::schema::mailentry::dsl;
+
+        diesel::delete(dsl::mailentry)
+            .filter(dsl::id.eq(self.id))
+            .execute(db)
+            .await
+            .map(|_| ())
     }
 }
 

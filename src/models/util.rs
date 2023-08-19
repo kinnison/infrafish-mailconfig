@@ -1,10 +1,12 @@
 //! Utility stuff for the models, not exported
 //!
 
+use argon2::{password_hash::SaltString, Argon2, PasswordHash, PasswordHasher};
 use diesel::QueryResult;
 use rsa::{
     pkcs1::EncodeRsaPrivateKey,
     pkcs8::{EncodePublicKey, LineEnding},
+    rand_core::OsRng,
     RsaPrivateKey, RsaPublicKey,
 };
 
@@ -70,4 +72,21 @@ impl Authorisation {
     pub fn superuser(&self) -> bool {
         self.superuser
     }
+}
+
+pub fn encode_password(password: &str) -> String {
+    (if let Some(rest) = password.strip_prefix("{ARGON2ID}") {
+        PasswordHash::new(rest).map(|h| h.serialize())
+    } else {
+        let salt = SaltString::generate(&mut OsRng);
+        PasswordHash::new(
+            &Argon2::default()
+                .hash_password(password.as_bytes(), &salt)
+                .expect("Unable to hash password")
+                .to_string(),
+        )
+        .map(|h| h.serialize())
+    })
+    .map(|h| format!("{{ARGON2ID}}{h}"))
+    .unwrap_or_else(|_| String::from(password))
 }
