@@ -66,6 +66,7 @@ diesel::table! {
     mailuser (id) {
         id -> Int4,
         username -> Varchar,
+        superuser -> Bool,
     }
 }
 

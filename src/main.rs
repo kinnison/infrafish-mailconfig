@@ -4,7 +4,11 @@ use axum::Router;
 use configuration::Configuration;
 use mailconfig::{apply_migrations, create_pool};
 use state::AppState;
-use tracing::{info, warn};
+use tower_http::{
+    trace::{DefaultMakeSpan, DefaultOnResponse, TraceLayer},
+    LatencyUnit,
+};
+use tracing::{info, warn, Level};
 use tracing_subscriber::{filter::LevelFilter, fmt, prelude::*, EnvFilter};
 
 mod api;
@@ -44,7 +48,15 @@ async fn main() {
 
     let port = config.port();
     let state = AppState::new(config, pool);
-    let app = Router::new().nest("/api", api::router(&state));
+    let app = Router::new().nest("/api", api::router(&state)).layer(
+        TraceLayer::new_for_http()
+            .make_span_with(DefaultMakeSpan::new().level(Level::INFO))
+            .on_response(
+                DefaultOnResponse::new()
+                    .level(Level::INFO)
+                    .latency_unit(LatencyUnit::Millis),
+            ),
+    );
     let app = app.with_state(state);
 
     let addr: SocketAddr = format!("127.0.0.1:{port}").parse().unwrap();

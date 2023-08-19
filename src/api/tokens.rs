@@ -2,13 +2,13 @@ use axum::{
     routing::{get, post},
     Extension, Json, Router,
 };
-use mailconfig::{models::MailAuthToken, Connection};
+use mailconfig::{
+    models::{Authorisation, MailAuthToken},
+    Connection,
+};
 use serde::{Deserialize, Serialize};
 
-use crate::{
-    state::AppState,
-    tokens::{Authorisation, Authorised},
-};
+use crate::{state::AppState, tokens::Authorised};
 
 use super::{APIError, APIResult};
 

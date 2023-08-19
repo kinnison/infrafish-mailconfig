@@ -2,7 +2,7 @@ use std::collections::BTreeMap;
 
 use axum::{routing::post, Extension, Json, Router};
 use mailconfig::{
-    models::{MailDomain, MailDomainKey},
+    models::{Authorisation, MailDomain, MailDomainKey},
     Connection,
 };
 use serde::{Deserialize, Serialize};
@@ -10,7 +10,6 @@ use serde::{Deserialize, Serialize};
 use crate::{
     api::{APIError, APIResult},
     state::AppState,
-    tokens::Authorisation,
 };
 
 #[derive(Deserialize)]
@@ -34,7 +33,7 @@ async fn list_domain_keys(
         .await?
         .ok_or_else(|| APIError::NotFound(body.mail_domain.clone()))?;
 
-    if !domain.may_access(&mut db, auth.user()).await? {
+    if !domain.may_access(&mut db, &auth).await? {
         return Err(APIError::PermissionDenied(body.mail_domain));
     }
 
@@ -77,7 +76,7 @@ async fn set_domainkey_signing(
         .await?
         .ok_or_else(|| APIError::NotFound(body.mail_domain.clone()))?;
 
-    if !domain.may_access(&mut db, auth.user()).await? {
+    if !domain.may_access(&mut db, &auth).await? {
         return Err(APIError::PermissionDenied(body.mail_domain));
     }
 
@@ -119,7 +118,7 @@ async fn create_domain_key(
         .await?
         .ok_or_else(|| APIError::NotFound(body.mail_domain.clone()))?;
 
-    if !domain.may_access(&mut db, auth.user()).await? {
+    if !domain.may_access(&mut db, &auth).await? {
         return Err(APIError::PermissionDenied(body.mail_domain));
     }
 
@@ -154,7 +153,7 @@ async fn delete_domainkey(
         .await?
         .ok_or_else(|| APIError::NotFound(body.mail_domain.clone()))?;
 
-    if !domain.may_access(&mut db, auth.user()).await? {
+    if !domain.may_access(&mut db, &auth).await? {
         return Err(APIError::PermissionDenied(body.mail_domain));
     }
 

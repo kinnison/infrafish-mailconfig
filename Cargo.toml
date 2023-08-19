@@ -26,7 +26,11 @@ thiserror = "1.0.43"
 tokio = { version = "1.28.2", features = ["full"] }
 tokio-postgres = "0.7.8"
 tokio-postgres-rustls = "0.10.0"
+tower-http = { version = "0.4.3", features = ["trace"] }
 tracing = "0.1.37"
-tracing-subscriber = { version = "0.3.17", features = ["env-filter", "tracing"] }
+tracing-subscriber = { version = "0.3.17", features = [
+    "env-filter",
+    "tracing",
+] }
 url = { version = "2.4.0", features = ["serde"] }
 webpki-roots = "0.23.1"

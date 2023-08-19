@@ -4,17 +4,17 @@ use axum::{
     routing::{get, post},
     Extension, Json, Router,
 };
-use mailconfig::{models::MailDomain, Connection};
+use mailconfig::{
+    models::{Authorisation, MailDomain, MailUser},
+    Connection,
+};
 use serde::{Deserialize, Serialize};
 
-use crate::{
-    api::APIError,
-    state::AppState,
-    tokens::{Authorisation, Authorised},
-};
+use crate::{api::APIError, state::AppState, tokens::Authorised};
 
 use super::APIResult;
 
+mod entries;
 mod keys;
 
 #[derive(Serialize)]
@@ -83,7 +83,7 @@ async fn set_domain_flags(
         .await?
         .ok_or_else(|| APIError::NotFound(body.domain_name.clone()))?;
 
-    if !domain.may_access(&mut db, auth.user()).await? {
+    if !domain.may_access(&mut db, &auth).await? {
         return Err(APIError::PermissionDenied(body.domain_name.clone()));
     }
 
@@ -120,10 +120,71 @@ async fn set_domain_flags(
     .into())
 }
 
+#[derive(Debug, Deserialize)]
+#[serde(deny_unknown_fields, rename_all = "kebab-case")]
+struct CreateDomainRequest {
+    domain_name: String,
+    #[serde(default)]
+    owner: Option<String>,
+    #[serde(default)]
+    remote_mx: Option<String>,
+    #[serde(default)]
+    sender_verify: Option<bool>,
+    #[serde(default)]
+    grey_listing: Option<bool>,
+    #[serde(default)]
+    virus_check: Option<bool>,
+    #[serde(default)]
+    spamcheck_threshold: Option<i32>,
+}
+
+async fn create_domain(
+    mut db: Connection,
+    Extension(auth): Extension<Authorisation>,
+    Json(body): Json<CreateDomainRequest>,
+) -> APIResult<Json<ListDomainResponseEntry>> {
+    if !auth.superuser() {
+        return Err(APIError::PermissionDenied(
+            "You are not permitted to create domains".into(),
+        ));
+    }
+
+    let owner = if let Some(owner) = &body.owner {
+        MailUser::by_name(&mut db, owner)
+            .await?
+            .ok_or_else(|| APIError::NotFound(format!("Unknown user {owner}")))?
+            .id
+    } else {
+        auth.user()
+    };
+
+    let domain = MailDomain::create(
+        &mut db,
+        &body.domain_name,
+        owner,
+        body.remote_mx.as_deref(),
+        body.sender_verify.unwrap_or(true),
+        body.grey_listing.unwrap_or(false),
+        body.virus_check.unwrap_or(true),
+        body.spamcheck_threshold.unwrap_or(100),
+    )
+    .await?;
+
+    Ok(Json::from(ListDomainResponseEntry {
+        remote_mx: domain.remotemx,
+        sender_verify: domain.sender_verify,
+        grey_listing: domain.grey_listing,
+        virus_check: domain.virus_check,
+        spamcheck_threshold: domain.spamcheck_threshold,
+    }))
+}
+
 pub fn router(state: &AppState) -> Router<AppState> {
     Router::new()
+        .route("/new", post(create_domain))
         .route("/list", get(list_domains))
         .route("/set-flags", post(set_domain_flags))
         .nest("/key", keys::router())
+        .nest("/entry", entries::router())
         .authorise(state.clone())
 }

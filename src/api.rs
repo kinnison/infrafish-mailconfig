@@ -52,6 +52,19 @@ impl From<APIError> for APIResponseError {
     }
 }
 
+impl APIResponseError {
+    fn code(&self) -> StatusCode {
+        match self {
+            APIResponseError::NotFound(_) => StatusCode::NOT_FOUND,
+            APIResponseError::BadToken(_)
+            | APIResponseError::AuthenticationFailure(_)
+            | APIResponseError::PermissionDenied(_) => StatusCode::FORBIDDEN,
+            APIResponseError::TokenInUse(_) => StatusCode::BAD_REQUEST,
+            APIResponseError::DatabaseError(_) => StatusCode::INTERNAL_SERVER_ERROR,
+        }
+    }
+}
+
 #[derive(Serialize)]
 struct ErrorOutcome {
     error: APIResponseError,
@@ -60,11 +73,8 @@ struct ErrorOutcome {
 impl IntoResponse for APIError {
     fn into_response(self) -> axum::response::Response {
         let error = APIResponseError::from(self);
-        match error {
-            APIResponseError::NotFound(e) => (StatusCode::NOT_FOUND, e).into_response(),
-            APIResponseError::PermissionDenied(e) => (StatusCode::FORBIDDEN, e).into_response(),
-            error => Json::from(ErrorOutcome { error }).into_response(),
-        }
+        let code = error.code();
+        (code, Json::from(ErrorOutcome { error })).into_response()
     }
 }
 

@@ -43,7 +43,7 @@ impl FromSql<MailEntryKindType, Pg> for MailEntryKind {
             b"alias" => Ok(Self::Alias),
             b"bouncer" => Ok(Self::Bouncer),
             b"blackhole" => Ok(Self::Blackhole),
-            _ => Err("Unrecognised visibility variant".into()),
+            _ => Err("Unrecognised mail entry kind variant".into()),
         }
     }
 }

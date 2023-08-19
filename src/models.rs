@@ -7,18 +7,22 @@ use diesel::{ExpressionMethods, Insertable, QueryDsl, QueryResult, Queryable};
 use diesel_async::{AsyncPgConnection, RunQueryDsl};
 pub use sql_types::MailEntryKind;
 
+pub use self::util::Authorisation;
+
 // These types need to match up with the schema
 
 #[derive(Queryable)]
 pub struct MailUser {
     pub id: i32,
     pub username: String,
+    pub superuser: bool,
 }
 
 #[derive(Insertable)]
 #[diesel(table_name = crate::schema::mailuser)]
 pub struct NewMailUser<'a> {
     pub username: &'a str,
+    pub superuser: bool,
 }
 
 #[derive(Queryable)]
@@ -120,6 +124,35 @@ pub struct NewMailDomainKey<'a> {
 // Below here are the implementations
 
 impl MailDomain {
+    #[allow(clippy::too_many_arguments)]
+    pub async fn create(
+        db: &mut AsyncPgConnection,
+        domain_name: &str,
+        owner: i32,
+        remote_mx: Option<&str>,
+        sender_verify: bool,
+        grey_listing: bool,
+        virus_check: bool,
+        spamcheck_threshold: i32,
+    ) -> QueryResult<Self> {
+        let newdom = NewMailDomain {
+            owner,
+            domainname: domain_name,
+            remotemx: remote_mx,
+            sender_verify,
+            grey_listing,
+            virus_check,
+            spamcheck_threshold,
+        };
+
+        use crate::schema::maildomain::dsl;
+
+        diesel::insert_into(dsl::maildomain)
+            .values(&newdom)
+            .get_result(db)
+            .await
+    }
+
     pub async fn get_all(db: &mut AsyncPgConnection) -> QueryResult<Vec<Self>> {
         use crate::schema::maildomain::dsl;
         dsl::maildomain
@@ -151,9 +184,9 @@ impl MailDomain {
     pub async fn may_access(
         &self,
         _db: &mut AsyncPgConnection,
-        authuser: i32,
+        auth: &Authorisation,
     ) -> QueryResult<bool> {
-        Ok(self.owner == authuser)
+        Ok(auth.superuser() || self.owner == auth.user())
     }
 
     pub async fn save(&self, db: &mut AsyncPgConnection) -> QueryResult<()> {
@@ -172,6 +205,16 @@ impl MailDomain {
             .execute(db)
             .await
             .map(|_| ())
+    }
+
+    pub async fn entries(&self, db: &mut AsyncPgConnection) -> QueryResult<Vec<MailEntry>> {
+        use crate::schema::mailentry::dsl;
+
+        dsl::mailentry
+            .filter(dsl::maildomain.eq(self.id))
+            .order_by(dsl::name.desc())
+            .get_results(db)
+            .await
     }
 }
 
@@ -255,6 +298,16 @@ impl MailUser {
     pub async fn by_id(db: &mut AsyncPgConnection, id: i32) -> QueryResult<Self> {
         use crate::schema::mailuser::dsl;
         dsl::mailuser.filter(dsl::id.eq(id)).first(db).await
+    }
+
+    pub async fn by_name(db: &mut AsyncPgConnection, name: &str) -> QueryResult<Option<Self>> {
+        use crate::schema::mailuser::dsl;
+
+        dsl::mailuser
+            .filter(dsl::username.eq(name))
+            .first(db)
+            .await
+            .optional()
     }
 }
 
