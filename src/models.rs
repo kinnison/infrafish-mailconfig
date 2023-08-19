@@ -295,6 +295,24 @@ impl MailEntry {
             .await
             .map(|_| ())
     }
+
+    pub fn set_password(&mut self, password: &str) {
+        self.password = Some(encode_password(password));
+    }
+
+    pub async fn save(&self, db: &mut crate::Connection) -> QueryResult<()> {
+        use crate::schema::mailentry::dsl;
+
+        diesel::update(dsl::mailentry)
+            .filter(dsl::id.eq(self.id))
+            .set((
+                dsl::password.eq(self.password.as_deref()),
+                dsl::expansion.eq(self.expansion.as_deref()),
+            ))
+            .execute(db)
+            .await
+            .map(|_| ())
+    }
 }
 
 impl AllowDenyList {

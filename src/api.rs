@@ -24,30 +24,55 @@ pub enum APIError {
     AuthErrorTokenInUse(String),
     #[error("Bad token: {0}")]
     BadToken(String),
+    #[error("Not a login or account: {0}")]
+    NotLoginOrAccount(String),
+    #[error("Not an alias: {0}")]
+    NotAlias(String),
+    #[error("Alias component {0} was not found")]
+    AliasComponentNotFound(String),
+    #[error("Cannot remove last component, alias {0} would become empty")]
+    AliasWouldBecomeEmpty(String),
 }
 
 pub type APIResult<T> = std::result::Result<T, APIError>;
 
 #[derive(Serialize)]
+#[serde(tag = "kind", rename_all = "kebab-case")]
 enum APIResponseError {
-    NotFound(String),
-    PermissionDenied(String),
-    DatabaseError(String),
-    AuthenticationFailure(String),
-    TokenInUse(String),
-    BadToken(String),
+    NotFound { item: String },
+    PermissionDenied { why: String },
+    DatabaseError { msg: String },
+    AuthenticationFailure { reason: String },
+    TokenInUse { token: String },
+    BadToken { token: String },
+    NotLoginOrAccount { item: String },
+    NotAlias { item: String },
+    AliasComponentNotFound { component: String },
+    AliasWouldBecomeEmpty { item: String },
 }
 
 impl From<APIError> for APIResponseError {
     fn from(value: APIError) -> Self {
         match value {
-            APIError::DatabaseError(e) => Self::DatabaseError(e.to_string()),
-            e @ APIError::AuthErrorNoToken => Self::AuthenticationFailure(e.to_string()),
-            e @ APIError::AuthErrorBadToken(_) => Self::AuthenticationFailure(e.to_string()),
-            e @ APIError::AuthErrorTokenInUse(_) => Self::TokenInUse(e.to_string()),
-            e @ APIError::BadToken(_) => Self::BadToken(e.to_string()),
-            APIError::NotFound(e) => Self::NotFound(e),
-            APIError::PermissionDenied(e) => Self::PermissionDenied(e),
+            APIError::DatabaseError(e) => Self::DatabaseError { msg: e.to_string() },
+            e @ APIError::AuthErrorNoToken => Self::AuthenticationFailure {
+                reason: e.to_string(),
+            },
+            e @ APIError::AuthErrorBadToken(_) => Self::AuthenticationFailure {
+                reason: e.to_string(),
+            },
+            e @ APIError::AuthErrorTokenInUse(_) => Self::TokenInUse {
+                token: e.to_string(),
+            },
+            e @ APIError::BadToken(_) => Self::BadToken {
+                token: e.to_string(),
+            },
+            APIError::NotFound(e) => Self::NotFound { item: e },
+            APIError::PermissionDenied(e) => Self::PermissionDenied { why: e },
+            APIError::NotLoginOrAccount(e) => Self::NotLoginOrAccount { item: e },
+            APIError::NotAlias(e) => Self::NotAlias { item: e },
+            APIError::AliasComponentNotFound(s) => Self::AliasComponentNotFound { component: s },
+            APIError::AliasWouldBecomeEmpty(s) => Self::AliasWouldBecomeEmpty { item: s },
         }
     }
 }
@@ -55,12 +80,16 @@ impl From<APIError> for APIResponseError {
 impl APIResponseError {
     fn code(&self) -> StatusCode {
         match self {
-            APIResponseError::NotFound(_) => StatusCode::NOT_FOUND,
-            APIResponseError::BadToken(_)
-            | APIResponseError::AuthenticationFailure(_)
-            | APIResponseError::PermissionDenied(_) => StatusCode::FORBIDDEN,
-            APIResponseError::TokenInUse(_) => StatusCode::BAD_REQUEST,
-            APIResponseError::DatabaseError(_) => StatusCode::INTERNAL_SERVER_ERROR,
+            APIResponseError::NotFound { .. } => StatusCode::NOT_FOUND,
+            APIResponseError::BadToken { .. }
+            | APIResponseError::AuthenticationFailure { .. }
+            | APIResponseError::PermissionDenied { .. } => StatusCode::FORBIDDEN,
+            APIResponseError::TokenInUse { .. } => StatusCode::BAD_REQUEST,
+            APIResponseError::DatabaseError { .. } => StatusCode::INTERNAL_SERVER_ERROR,
+            APIResponseError::AliasComponentNotFound { .. }
+            | APIResponseError::AliasWouldBecomeEmpty { .. }
+            | APIResponseError::NotAlias { .. }
+            | APIResponseError::NotLoginOrAccount { .. } => StatusCode::BAD_REQUEST,
         }
     }
 }
