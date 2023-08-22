@@ -7,6 +7,7 @@ use crate::{configuration::Configuration, state::AppState};
 mod domain;
 mod frontend;
 mod tokens;
+mod users;
 
 #[derive(Error, Debug)]
 pub enum APIError {
@@ -32,6 +33,8 @@ pub enum APIError {
     AliasComponentNotFound(String),
     #[error("Cannot remove last component, alias {0} would become empty")]
     AliasWouldBecomeEmpty(String),
+    #[error("User already exists")]
+    UserAlreadyExists(String),
 }
 
 pub type APIResult<T> = std::result::Result<T, APIError>;
@@ -49,6 +52,7 @@ enum APIResponseError {
     NotAlias { item: String },
     AliasComponentNotFound { component: String },
     AliasWouldBecomeEmpty { item: String },
+    UserAlreadyExists { item: String },
 }
 
 impl From<APIError> for APIResponseError {
@@ -73,6 +77,7 @@ impl From<APIError> for APIResponseError {
             APIError::NotAlias(e) => Self::NotAlias { item: e },
             APIError::AliasComponentNotFound(s) => Self::AliasComponentNotFound { component: s },
             APIError::AliasWouldBecomeEmpty(s) => Self::AliasWouldBecomeEmpty { item: s },
+            APIError::UserAlreadyExists(s) => Self::UserAlreadyExists { item: s },
         }
     }
 }
@@ -89,6 +94,7 @@ impl APIResponseError {
             APIResponseError::AliasComponentNotFound { .. }
             | APIResponseError::AliasWouldBecomeEmpty { .. }
             | APIResponseError::NotAlias { .. }
+            | APIResponseError::UserAlreadyExists { .. }
             | APIResponseError::NotLoginOrAccount { .. } => StatusCode::BAD_REQUEST,
         }
     }
@@ -124,4 +130,5 @@ pub fn router(state: &AppState) -> Router<AppState> {
         .nest("/frontend", frontend::router())
         .nest("/token", tokens::router(state))
         .nest("/domain", domain::router(state))
+        .nest("/user", users::router(state))
 }

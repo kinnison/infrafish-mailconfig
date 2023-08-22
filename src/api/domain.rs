@@ -63,6 +63,8 @@ async fn list_domains(
 struct SetDomainFlagsRequest {
     domain_name: String,
     #[serde(default)]
+    owner: Option<String>,
+    #[serde(default)]
     remote_mx: Option<String>,
     #[serde(default)]
     sender_verify: Option<bool>,
@@ -88,6 +90,20 @@ async fn set_domain_flags(
     }
 
     // Permission granted, so let's see what we can do...
+    domain.owner = if let Some(owner) = body.owner.as_deref() {
+        if !auth.superuser() {
+            return Err(APIError::PermissionDenied(body.domain_name.clone()));
+        }
+        if let Some(user) = MailUser::by_name(&mut db, owner).await? {
+            user.id
+        } else {
+            return Err(APIError::NotFound(owner.to_string()));
+        }
+    } else {
+        domain.owner
+    };
+
+    // The rest does not need superuser
     if let Some(remote_mx) = body.remote_mx.as_deref() {
         if remote_mx.is_empty() {
             domain.remotemx = None;

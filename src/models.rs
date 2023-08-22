@@ -406,6 +406,42 @@ impl MailUser {
             .await
             .optional()
     }
+
+    pub async fn all(db: &mut AsyncPgConnection) -> QueryResult<Vec<Self>> {
+        use crate::schema::mailuser::dsl;
+
+        dsl::mailuser
+            .order_by(dsl::username.asc())
+            .get_results(db)
+            .await
+    }
+
+    pub async fn tokens(&self, db: &mut AsyncPgConnection) -> QueryResult<Vec<MailAuthToken>> {
+        use crate::schema::mailauthtoken::dsl;
+
+        dsl::mailauthtoken
+            .filter(dsl::mailuser.eq(self.id))
+            .get_results(db)
+            .await
+    }
+
+    pub async fn create(
+        db: &mut AsyncPgConnection,
+        username: &str,
+        superuser: bool,
+    ) -> QueryResult<Self> {
+        let newuser = NewMailUser {
+            username,
+            superuser,
+        };
+        use crate::schema::mailuser::dsl;
+        let user: MailUser = diesel::insert_into(dsl::mailuser)
+            .values(&newuser)
+            .get_result(db)
+            .await?;
+        MailAuthToken::create(db, user.id, "default").await?;
+        Ok(user)
+    }
 }
 
 impl MailDomainKey {
