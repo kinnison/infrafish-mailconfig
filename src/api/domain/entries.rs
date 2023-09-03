@@ -173,7 +173,7 @@ async fn get_entry(
         MailEntryKind::Login => EntryListResponseItem::Login,
         MailEntryKind::Account => EntryListResponseItem::Account,
         MailEntryKind::Alias => EntryListResponseItem::Alias {
-            expansion: db_entry.expansion.clone().unwrap_or_default(),
+            expansion: db_entry.expansion.unwrap_or_default(),
         },
         MailEntryKind::Bouncer => EntryListResponseItem::Bouncer,
         MailEntryKind::Blackhole => EntryListResponseItem::Blackhole,
