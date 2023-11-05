@@ -30,6 +30,10 @@ mailconfig () {
 
 ```
 
+> **NOTE**: If you're on Infrafish already then there is an equivalent shell
+> script in your path. No need to add the above to your `.bashrc` or
+> equivalent.
+
 We're going to assume you have such a function in your shell and go from there.
 Note: using this kind of interface will cause your token to potentially be
 visible in `ps` so you may want to find a better option (or wait for a custom
