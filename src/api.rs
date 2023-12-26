@@ -1,4 +1,10 @@
-use axum::{extract::State, http::StatusCode, response::IntoResponse, routing::get, Json, Router};
+use axum::{
+    extract::{Path, State},
+    http::{header, StatusCode},
+    response::{IntoResponse, Response},
+    routing::get,
+    Json, Router,
+};
 use serde::Serialize;
 use thiserror::Error;
 
@@ -124,8 +130,44 @@ async fn get_ping(State(config): State<Configuration>) -> Json<PingOutput> {
     .into()
 }
 
+async fn autoconfig(Path(domain): Path<String>) -> APIResult<Response> {
+    const TEMPLATE: &str = r#"<?xml version="1.0" encoding="UTF-8"?>
+
+<clientConfig version="1.1">
+  <emailProvider id="infrafish.uk">
+    <domain>$DOMAIN</domain>
+    <displayName>Infrafish Email</displayName>
+    <displayShortName>Infrafish</displayShortName>
+    <incomingServer type="imap">
+      <hostname>mail.infrafish.uk</hostname>
+      <port>993</port>
+      <socketType>SSL</socketType>
+      <authentication>password-cleartext</authentication>
+      <username>%EMAILADDRESS%</username>
+    </incomingServer>
+    <outgoingServer type="smtp">
+      <hostname>mail.infrafish.uk</hostname>
+      <port>587</port>
+      <socketType>STARTTLS</socketType>
+      <authentication>password-cleartext</authentication>
+      <username>%EMAILADDRESS%</username>
+    </outgoingServer>
+  </emailProvider>
+</clientConfig>
+"#;
+
+    let domain = domain.strip_prefix("autoconfig.").unwrap_or(&domain);
+
+    let body = TEMPLATE.replace("$DOMAIN", domain);
+
+    println!("Created: {body}");
+
+    Ok((StatusCode::OK, [(header::CONTENT_TYPE, "text/xml")], body).into_response())
+}
+
 pub fn router(state: &AppState) -> Router<AppState> {
     Router::new()
+        .route("/autoconfig/:domain", get(autoconfig))
         .route("/ping", get(get_ping))
         .nest("/frontend", frontend::router())
         .nest("/token", tokens::router(state))
