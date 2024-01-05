@@ -203,6 +203,7 @@ impl MailDomain {
                 dsl::sender_verify.eq(self.sender_verify),
                 dsl::spamcheck_threshold.eq(self.spamcheck_threshold),
                 dsl::virus_check.eq(self.virus_check),
+                dsl::owner.eq(self.owner),
             ))
             .execute(db)
             .await
