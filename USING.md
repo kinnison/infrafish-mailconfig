@@ -217,11 +217,19 @@ This will give you a mapping of entries in your domain such as:
     "automation": {
       "kind": "login"
     }
+    "zombie": {
+      "kind": "bouncer",
+      "reason": "Sadly the zombie is predeceased."
+    }
+    "toilet": {
+      "kind": "blackhole",
+      "reason": "I want to flush emails away"
+    }
   }
 }
 ```
 
-This shows the three kinds of entries currently supported.
+This shows the five kinds of entries currently supported.
 
 - Aliases expand into their given expansion - comma-separated entries which
   will be qualified by the domain name if no `@` is present.
@@ -230,6 +238,10 @@ This shows the three kinds of entries currently supported.
   smarthost through Infrafish.
 - Accounts are username/password pairs which can both log in and receive
   email.
+- Bouncers mark an address as being undeliverable with a reason which will
+  be returned to the calling MX when it tries to send an email
+- Blackholes mark an address as simply swallowing emails up, in this case
+  the reason is purely for the user to remember why.
 
 When interacting with other systems, the "username" is always the full account
 address such as `myname@my-domain.com` above.
@@ -248,10 +260,12 @@ You'll get a response which looks like:
 }
 ```
 
-Valid `kind`s are `alias`, `account`, and `login`. All three need a `name`,
-and where `alias` needs an `expansion`, the other two expect a `password`.
+Valid `kind`s are `alias`, `blackhole`, `bouncer`, `account`, and `login`.
+All three need a `name`, and where `alias` needs an `expansion`, `blackhole`
+and `bouncer` need a `reason`, and the other two (`account` and `alias`) expect
+a `password`.
 
-The system will automatically encode the given password using the argon2id
+The system will automatically encode a provided password using the argon2id
 scheme unless the passed in password starts with `{ARGON2ID}` in which case
 it is assumed to already be encoded. Please be careful with this capability.
 
@@ -328,6 +342,16 @@ mailconfig post domain/entry/my-domain/foo remove=myname
 ```
 
 In all cases, the response is just like for resetting a password.
+
+#### Editing the reason for blackholes and bouncers
+
+Blackholes and bouncers can have their reasons updating with:
+
+```shell
+mailconfig post domain/entry/my-domain/foo reason="New reason for this entry"
+```
+
+In all cases, the resonse is just like for resetting a password.
 
 ## DKIM - Domain keys
 
