@@ -284,6 +284,50 @@ impl MailDomain {
             .await
             .map(|_| ())
     }
+
+    pub async fn new_bouncer(
+        &self,
+        db: &mut AsyncPgConnection,
+        name: &str,
+        reason: &str,
+    ) -> QueryResult<()> {
+        let new_entry = NewMailEntry {
+            maildomain: self.id,
+            name,
+            kind: MailEntryKind::Bouncer,
+            password: None,
+            expansion: Some(reason),
+        };
+
+        use crate::schema::mailentry::dsl;
+        diesel::insert_into(dsl::mailentry)
+            .values(new_entry)
+            .execute(db)
+            .await
+            .map(|_| ())
+    }
+
+    pub async fn new_blackhole(
+        &self,
+        db: &mut AsyncPgConnection,
+        name: &str,
+        reason: &str,
+    ) -> QueryResult<()> {
+        let new_entry = NewMailEntry {
+            maildomain: self.id,
+            name,
+            kind: MailEntryKind::Blackhole,
+            password: None,
+            expansion: Some(reason),
+        };
+
+        use crate::schema::mailentry::dsl;
+        diesel::insert_into(dsl::mailentry)
+            .values(new_entry)
+            .execute(db)
+            .await
+            .map(|_| ())
+    }
 }
 
 impl MailEntry {

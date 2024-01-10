@@ -23,8 +23,8 @@ enum EntryListResponseItem {
     Login,
     Account,
     Alias { expansion: String },
-    Blackhole,
-    Bouncer,
+    Blackhole { reason: String },
+    Bouncer { reason: String },
 }
 async fn list_entries(
     mut db: Connection,
@@ -56,8 +56,12 @@ async fn list_entries(
                 MailEntryKind::Alias => EntryListResponseItem::Alias {
                     expansion: expansion.unwrap_or_default(),
                 },
-                MailEntryKind::Bouncer => EntryListResponseItem::Bouncer,
-                MailEntryKind::Blackhole => EntryListResponseItem::Blackhole,
+                MailEntryKind::Bouncer => EntryListResponseItem::Bouncer {
+                    reason: expansion.unwrap_or_default(),
+                },
+                MailEntryKind::Blackhole => EntryListResponseItem::Blackhole {
+                    reason: expansion.unwrap_or_default(),
+                },
             },
         );
     }
@@ -101,6 +105,8 @@ enum CreateEntryRequest {
     Login { name: String, password: String },
     Account { name: String, password: String },
     Alias { name: String, expansion: String },
+    Bouncer { name: String, reason: String },
+    Blackhole { name: String, reason: String },
 }
 
 impl CreateEntryRequest {
@@ -109,6 +115,8 @@ impl CreateEntryRequest {
             Self::Login { name, .. } => name,
             Self::Account { name, .. } => name,
             Self::Alias { name, .. } => name,
+            Self::Bouncer { name, .. } => name,
+            Self::Blackhole { name, .. } => name,
         }
     }
 }
@@ -144,6 +152,12 @@ async fn create_entry(
         CreateEntryRequest::Alias { name, expansion } => {
             domain.new_alias(&mut db, &name, &expansion).await?
         }
+        CreateEntryRequest::Bouncer { name, reason } => {
+            domain.new_bouncer(&mut db, &name, &reason).await?
+        }
+        CreateEntryRequest::Blackhole { name, reason } => {
+            domain.new_blackhole(&mut db, &name, &reason).await?
+        }
     }
 
     Ok(Json::from(CreationResponse { created: full_name }))
@@ -175,8 +189,12 @@ async fn get_entry(
         MailEntryKind::Alias => EntryListResponseItem::Alias {
             expansion: db_entry.expansion.unwrap_or_default(),
         },
-        MailEntryKind::Bouncer => EntryListResponseItem::Bouncer,
-        MailEntryKind::Blackhole => EntryListResponseItem::Blackhole,
+        MailEntryKind::Bouncer => EntryListResponseItem::Bouncer {
+            reason: db_entry.expansion.unwrap_or_default(),
+        },
+        MailEntryKind::Blackhole => EntryListResponseItem::Blackhole {
+            reason: db_entry.expansion.unwrap_or_default(),
+        },
     }))
 }
 
@@ -187,6 +205,7 @@ enum EditEntryRequest {
     Expansion { expansion: String },
     AddExpansion { add: String },
     RemoveExpansion { remove: String },
+    ChangeReason { reason: String },
 }
 
 #[derive(Serialize, Debug)]
@@ -215,21 +234,23 @@ async fn update_entry(
         .await?
         .ok_or_else(|| APIError::NotFound(full_name.clone()))?;
 
-    if db_entry.password.is_some() && !matches!(body, EditEntryRequest::SetPassword { .. }) {
-        return Err(APIError::NotAlias(full_name));
-    }
-    if db_entry.expansion.is_some() && matches!(body, EditEntryRequest::SetPassword { .. }) {
-        return Err(APIError::NotLoginOrAccount(full_name));
-    }
-
     match body {
         EditEntryRequest::SetPassword { password } => {
+            if !matches!(db_entry.kind, MailEntryKind::Login | MailEntryKind::Account) {
+                return Err(APIError::NotLoginOrAccount(full_name));
+            }
             db_entry.set_password(&password);
         }
         EditEntryRequest::Expansion { expansion } => {
+            if !matches!(db_entry.kind, MailEntryKind::Alias) {
+                return Err(APIError::NotAlias(full_name));
+            }
             db_entry.expansion = Some(expansion);
         }
         EditEntryRequest::AddExpansion { add } => {
+            if !matches!(db_entry.kind, MailEntryKind::Alias) {
+                return Err(APIError::NotAlias(full_name));
+            }
             let mut bits: Vec<&str> = db_entry
                 .expansion
                 .as_deref()
@@ -243,6 +264,9 @@ async fn update_entry(
             db_entry.expansion = Some(bits.join(", "));
         }
         EditEntryRequest::RemoveExpansion { remove } => {
+            if !matches!(db_entry.kind, MailEntryKind::Alias) {
+                return Err(APIError::NotAlias(full_name));
+            }
             let bits: Vec<&str> = db_entry
                 .expansion
                 .as_deref()
@@ -259,6 +283,15 @@ async fn update_entry(
                 return Err(APIError::AliasComponentNotFound(remove));
             }
             db_entry.expansion = new_expn;
+        }
+        EditEntryRequest::ChangeReason { reason } => {
+            if !matches!(
+                db_entry.kind,
+                MailEntryKind::Bouncer | MailEntryKind::Blackhole,
+            ) {
+                return Err(APIError::NotBouncerOrBlackhole(full_name));
+            }
+            db_entry.expansion = Some(reason);
         }
     }
 

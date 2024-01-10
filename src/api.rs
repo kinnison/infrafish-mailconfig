@@ -41,6 +41,8 @@ pub enum APIError {
     AliasWouldBecomeEmpty(String),
     #[error("User already exists")]
     UserAlreadyExists(String),
+    #[error("Not a blackhole or bouncer")]
+    NotBouncerOrBlackhole(String),
 }
 
 pub type APIResult<T> = std::result::Result<T, APIError>;
@@ -59,6 +61,7 @@ enum APIResponseError {
     AliasComponentNotFound { component: String },
     AliasWouldBecomeEmpty { item: String },
     UserAlreadyExists { item: String },
+    NotBouncerOrBlackhole { item: String },
 }
 
 impl From<APIError> for APIResponseError {
@@ -84,6 +87,7 @@ impl From<APIError> for APIResponseError {
             APIError::AliasComponentNotFound(s) => Self::AliasComponentNotFound { component: s },
             APIError::AliasWouldBecomeEmpty(s) => Self::AliasWouldBecomeEmpty { item: s },
             APIError::UserAlreadyExists(s) => Self::UserAlreadyExists { item: s },
+            APIError::NotBouncerOrBlackhole(s) => Self::NotBouncerOrBlackhole { item: s },
         }
     }
 }
@@ -101,7 +105,8 @@ impl APIResponseError {
             | APIResponseError::AliasWouldBecomeEmpty { .. }
             | APIResponseError::NotAlias { .. }
             | APIResponseError::UserAlreadyExists { .. }
-            | APIResponseError::NotLoginOrAccount { .. } => StatusCode::BAD_REQUEST,
+            | APIResponseError::NotLoginOrAccount { .. }
+            | APIResponseError::NotBouncerOrBlackhole { .. } => StatusCode::BAD_REQUEST,
         }
     }
 }
