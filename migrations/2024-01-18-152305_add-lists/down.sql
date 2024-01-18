@@ -1,0 +1,1 @@
+-- Nothing to revert as we cannot remove an enum entry in pgsql

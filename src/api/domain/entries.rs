@@ -25,6 +25,7 @@ enum EntryListResponseItem {
     Alias { expansion: String },
     Blackhole { reason: String },
     Bouncer { reason: String },
+    List { members: String },
 }
 async fn list_entries(
     mut db: Connection,
@@ -61,6 +62,9 @@ async fn list_entries(
                 },
                 MailEntryKind::Blackhole => EntryListResponseItem::Blackhole {
                     reason: expansion.unwrap_or_default(),
+                },
+                MailEntryKind::List => EntryListResponseItem::List {
+                    members: expansion.unwrap_or_default(),
                 },
             },
         );
@@ -107,6 +111,7 @@ enum CreateEntryRequest {
     Alias { name: String, expansion: String },
     Bouncer { name: String, reason: String },
     Blackhole { name: String, reason: String },
+    List { name: String, members: String },
 }
 
 impl CreateEntryRequest {
@@ -117,6 +122,7 @@ impl CreateEntryRequest {
             Self::Alias { name, .. } => name,
             Self::Bouncer { name, .. } => name,
             Self::Blackhole { name, .. } => name,
+            Self::List { name, .. } => name,
         }
     }
 }
@@ -158,6 +164,9 @@ async fn create_entry(
         CreateEntryRequest::Blackhole { name, reason } => {
             domain.new_blackhole(&mut db, &name, &reason).await?
         }
+        CreateEntryRequest::List { name, members } => {
+            domain.new_list(&mut db, &name, &members).await?
+        }
     }
 
     Ok(Json::from(CreationResponse { created: full_name }))
@@ -194,6 +203,9 @@ async fn get_entry(
         },
         MailEntryKind::Blackhole => EntryListResponseItem::Blackhole {
             reason: db_entry.expansion.unwrap_or_default(),
+        },
+        MailEntryKind::List => EntryListResponseItem::List {
+            members: db_entry.expansion.unwrap_or_default(),
         },
     }))
 }
@@ -248,7 +260,7 @@ async fn update_entry(
             db_entry.expansion = Some(expansion);
         }
         EditEntryRequest::AddExpansion { add } => {
-            if !matches!(db_entry.kind, MailEntryKind::Alias) {
+            if !matches!(db_entry.kind, MailEntryKind::Alias | MailEntryKind::List) {
                 return Err(APIError::NotAlias(full_name));
             }
             let mut bits: Vec<&str> = db_entry
@@ -264,7 +276,7 @@ async fn update_entry(
             db_entry.expansion = Some(bits.join(", "));
         }
         EditEntryRequest::RemoveExpansion { remove } => {
-            if !matches!(db_entry.kind, MailEntryKind::Alias) {
+            if !matches!(db_entry.kind, MailEntryKind::Alias | MailEntryKind::List) {
                 return Err(APIError::NotAlias(full_name));
             }
             let bits: Vec<&str> = db_entry

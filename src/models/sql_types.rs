@@ -13,6 +13,7 @@ pub enum MailEntryKind {
     Alias,
     Bouncer,
     Blackhole,
+    List,
 }
 
 impl<DB: Backend> ToSql<MailEntryKindType, DB> for MailEntryKind
@@ -29,6 +30,7 @@ where
             MailEntryKind::Alias => ("alias").to_sql(out),
             MailEntryKind::Bouncer => ("bouncer").to_sql(out),
             MailEntryKind::Blackhole => ("blackhole").to_sql(out),
+            MailEntryKind::List => ("list").to_sql(out),
         }
     }
 }
@@ -43,6 +45,7 @@ impl FromSql<MailEntryKindType, Pg> for MailEntryKind {
             b"alias" => Ok(Self::Alias),
             b"bouncer" => Ok(Self::Bouncer),
             b"blackhole" => Ok(Self::Blackhole),
+            b"list" => Ok(Self::List),
             _ => Err("Unrecognised mail entry kind variant".into()),
         }
     }

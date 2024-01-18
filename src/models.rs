@@ -328,6 +328,28 @@ impl MailDomain {
             .await
             .map(|_| ())
     }
+
+    pub async fn new_list(
+        &self,
+        db: &mut AsyncPgConnection,
+        name: &str,
+        members: &str,
+    ) -> QueryResult<()> {
+        let new_entry = NewMailEntry {
+            maildomain: self.id,
+            name,
+            kind: MailEntryKind::List,
+            password: None,
+            expansion: Some(members),
+        };
+
+        use crate::schema::mailentry::dsl;
+        diesel::insert_into(dsl::mailentry)
+            .values(new_entry)
+            .execute(db)
+            .await
+            .map(|_| ())
+    }
 }
 
 impl MailEntry {
