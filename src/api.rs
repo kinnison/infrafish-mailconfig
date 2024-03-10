@@ -165,8 +165,6 @@ async fn autoconfig(Path(domain): Path<String>) -> APIResult<Response> {
 
     let body = TEMPLATE.replace("$DOMAIN", domain);
 
-    println!("Created: {body}");
-
     Ok((StatusCode::OK, [(header::CONTENT_TYPE, "text/xml")], body).into_response())
 }
 
