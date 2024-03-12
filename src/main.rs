@@ -1,10 +1,11 @@
 use std::net::SocketAddr;
 
-use axum::Router;
+use axum::{http::Method, Router};
 use configuration::Configuration;
 use mailconfig::{apply_migrations, create_pool};
 use state::AppState;
 use tower_http::{
+    cors::{AllowHeaders, AllowOrigin, CorsLayer},
     trace::{DefaultMakeSpan, DefaultOnResponse, TraceLayer},
     LatencyUnit,
 };
@@ -48,15 +49,24 @@ async fn main() {
 
     let port = config.port();
     let state = AppState::new(config, pool);
-    let app = Router::new().nest("/api", api::router(&state)).layer(
-        TraceLayer::new_for_http()
-            .make_span_with(DefaultMakeSpan::new().level(Level::INFO))
-            .on_response(
-                DefaultOnResponse::new()
-                    .level(Level::INFO)
-                    .latency_unit(LatencyUnit::Millis),
-            ),
-    );
+    let app = Router::new()
+        .nest("/api", api::router(&state))
+        .layer(
+            TraceLayer::new_for_http()
+                .make_span_with(DefaultMakeSpan::new().level(Level::INFO))
+                .on_response(
+                    DefaultOnResponse::new()
+                        .level(Level::INFO)
+                        .latency_unit(LatencyUnit::Millis),
+                ),
+        )
+        .layer(
+            CorsLayer::new()
+                .allow_credentials(true)
+                .allow_methods([Method::GET, Method::POST])
+                .allow_origin(AllowOrigin::mirror_request())
+                .allow_headers(AllowHeaders::mirror_request()),
+        );
     let app = app.with_state(state);
 
     let addr: SocketAddr = format!("127.0.0.1:{port}").parse().unwrap();
