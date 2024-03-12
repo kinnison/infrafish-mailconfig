@@ -1,0 +1,14 @@
+@import "./leptonic/leptonic-themes";
+
+body {
+    margin: 0px;
+}
+
+[data-theme="light"] {
+    --app-bar-background-color: #aaa;
+}
+
+[data-theme="dark"] {
+    --app-bar-background-color: #444;
+    
+}

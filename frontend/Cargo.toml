@@ -1,0 +1,22 @@
+[package]
+name = "leptotest"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+reqwest = { version = "0.11.25", features = ["json"] }
+api_types = { path = "../api_types" }
+console_error_panic_hook = "0.1.7"
+leptonic = { version = "0.5.0", features = ["csr"] }
+leptos = { version = "0.6.9", features = ["csr"] }
+leptos-use = { version = "0.10.5", features = ["serde", "serde_json"] }
+leptos_router = { version = "0.6.9", features = ["csr"] }
+serde = { version = "1.0.197", features = ["derive"] }
+time = "=0.3.31"
+uuid = "1.7.0"
+
+[package.metadata.leptonic]
+style-dir = "style"
+js-dir = "public/js"

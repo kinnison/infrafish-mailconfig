@@ -1,0 +1,8 @@
+[[hooks]]
+stage = "pre_build"
+command = "bash"
+command_arguments = ["-c", ". ${TRUNK_SOURCE_DIR}/build-styles.sh"]
+
+[watch]
+
+ignore = ["./dist"]

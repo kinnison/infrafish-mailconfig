@@ -5,7 +5,11 @@ edition = "2021"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
+[workspace]
+members = ["api_types", "frontend"]
+
 [dependencies]
+api_types = { path = "./api_types" }
 argon2 = "0.5.1"
 async-trait = "0.1.71"
 axum = { version = "0.6.18", features = ["tracing", "http2", "macros"] }

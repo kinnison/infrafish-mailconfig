@@ -12,18 +12,7 @@ use crate::{state::AppState, tokens::Authorised};
 
 use super::{APIError, APIResult};
 
-#[derive(Serialize)]
-struct TokenListResponseEntry {
-    token: String,
-    label: String,
-}
-
-#[derive(Serialize)]
-struct TokenListResponse {
-    username: String,
-    used_token: String,
-    tokens: Vec<TokenListResponseEntry>,
-}
+use api_types::tokens::*;
 
 async fn list_tokens(
     mut db: Connection,
