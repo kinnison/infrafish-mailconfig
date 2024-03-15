@@ -12,15 +12,18 @@ pub fn DomainList() -> impl IntoView {
     let state = ApplicationState::acquire();
 
     let domain_list = create_resource(
-        move || state.login_state().get().api_token().unwrap_or_default(),
+        move || state.login_state().get().api_token(),
         move |token| async move {
-            state
-                .api_get::<ListDomainResponse>(&token, "/domain/list")
-                .await
-                .ok()
-                .unwrap_or_else(|| ListDomainResponse {
-                    domains: Default::default(),
-                })
+            match token {
+                None => None,
+                Some(token) => state
+                    .api_get::<ListDomainResponse>(&token, "/domain/list")
+                    .await
+                    .ok(),
+            }
+            .unwrap_or_else(|| ListDomainResponse {
+                domains: Default::default(),
+            })
         },
     );
 
@@ -113,25 +116,25 @@ pub fn DomainFlags() -> impl IntoView {
         Signal::derive(move || domain.get().unwrap_or_default().domain.unwrap_or_default());
     let state = ApplicationState::acquire();
     let domain_flags = create_resource(
-        move || {
-            (
-                state.login_state().get().api_token().unwrap_or_default(),
-                domain.get(),
-            )
-        },
+        move || (state.login_state().get().api_token(), domain.get()),
         move |(token, domain)| async move {
-            let req = SetDomainFlagsRequest {
-                domain_name: domain,
-                ..Default::default()
-            };
-            state
-                .api_post::<ListDomainResponseEntry, SetDomainFlagsRequest>(
-                    &token,
-                    "/domain/set-flags",
-                    &req,
-                )
-                .await
-                .ok()
+            match token {
+                None => None,
+                Some(token) => {
+                    let req = SetDomainFlagsRequest {
+                        domain_name: domain,
+                        ..Default::default()
+                    };
+                    state
+                        .api_post::<ListDomainResponseEntry, SetDomainFlagsRequest>(
+                            &token,
+                            "/domain/set-flags",
+                            &req,
+                        )
+                        .await
+                        .ok()
+                }
+            }
         },
     );
 
