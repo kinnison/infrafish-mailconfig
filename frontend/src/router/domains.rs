@@ -189,6 +189,7 @@ pub fn DomainFlags() -> impl IntoView {
 
     view! {
         <Stack spacing=Size::Em(0.5) style="align-items: flex-start;">
+            <h2>{move || domain.get()} - Domain Flags</h2>
             <Stack orientation=StackOrientation::Horizontal spacing=Size::Em(0.5)>
                 "Sender Verification"
                 <Toggle
