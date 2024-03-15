@@ -2,13 +2,10 @@
 //!
 //!
 
-use std::convert::identity;
-
 use api_types::tokens::TokenListResponse;
 use leptos::{logging::log, *};
 use leptos_use::{storage::*, utils::JsonCodec};
-use reqwest::StatusCode;
-use serde::{Deserialize, Serialize};
+use serde::{de::DeserializeOwned, Deserialize, Serialize};
 
 #[derive(Clone, Copy)]
 pub struct ApplicationState {
@@ -32,12 +29,21 @@ impl Default for LoginState {
     }
 }
 
+const API_BASE: &str = "https://mail.infrafish.uk/api";
+
 impl LoginState {
     pub fn token(&self) -> Option<String> {
         match self {
             LoginState::LoggedOut(token) => token.clone(),
             LoginState::TryingLogin(token) => Some(token.clone()),
             LoginState::LoggedIn(token, _username) => Some(token.clone()),
+        }
+    }
+
+    pub fn api_token(&self) -> Option<String> {
+        match self {
+            LoginState::LoggedIn(token, _) => Some(token.clone()),
+            _ => None,
         }
     }
 
@@ -61,10 +67,8 @@ impl ApplicationState {
 
         create_effect({
             let value_getter = try_login_action.value();
-            move |prev| {
+            move |_prev| {
                 let value = value_getter.get();
-                let prev = prev.and_then(identity);
-                log!("Seeing potential value change: {prev:?} <=> {value:?}");
                 if let Some(outcome) = value.clone() {
                     match outcome {
                         Ok((token, username)) => {
@@ -126,6 +130,41 @@ impl ApplicationState {
         } else {
             Err(token)
         }
+    }
+
+    pub async fn api_get<T>(&self, token: &str, uri: &str) -> Result<T, reqwest::Error>
+    where
+        T: DeserializeOwned + 'static,
+    {
+        let client = reqwest::Client::builder().build()?;
+        let res = client
+            .get(format!("{}{}", API_BASE, uri))
+            .bearer_auth(token)
+            .send()
+            .await?
+            .error_for_status()?;
+        res.json().await
+    }
+
+    pub async fn api_post<T, B>(
+        &self,
+        token: &str,
+        uri: &str,
+        body: &B,
+    ) -> Result<T, reqwest::Error>
+    where
+        T: DeserializeOwned + 'static,
+        B: Serialize,
+    {
+        let client = reqwest::Client::builder().build()?;
+        let res = client
+            .post(format!("{}{}", API_BASE, uri))
+            .bearer_auth(token)
+            .json(body)
+            .send()
+            .await?
+            .error_for_status()?;
+        res.json().await
     }
 
     pub fn log_out(&self) {

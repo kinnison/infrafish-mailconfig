@@ -4,6 +4,10 @@ body {
     margin: 0px;
 }
 
+leptonic-drawer {
+    z-index: 900;
+}
+
 [data-theme="light"] {
     --app-bar-background-color: #aaa;
 }

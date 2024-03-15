@@ -8,27 +8,42 @@ use leptos_router::*;
 use time::Duration;
 use uuid::Uuid;
 
-use crate::state::{ApplicationState, LoginState};
+use crate::{
+    router::domains::*,
+    state::{ApplicationState, LoginState},
+};
 
-#[component]
+mod domains;
+
+#[component(transparent)]
 pub fn PageRouter() -> impl IntoView {
-    let state = ApplicationState::acquire();
-    let ui_ready = state.is_ready();
-    let login_state = state.login_state();
-    let logged_in =
-        move || ui_ready.get() && matches!(login_state.get(), LoginState::LoggedIn(_, _));
     view! {
         <LoginDialog/>
         <LoggingInDialog/>
-        <Show when=logged_in fallback=|| view! {}>
-            <TopLevelRouter/>
-        </Show>
+        <TopLevelRouter/>
+    }
+}
+
+#[component(transparent)]
+fn TopLevelRouter() -> impl IntoView {
+    view! {
+        <Routes>
+            <Route path="" view=GotoAdmin/>
+            <Route path="admin" view=DomainList>
+                <Route path=":domain" view=DomainSelected>
+                    <Route path="" view=PickDomainPart/>
+                    <Route path="entries" view=DomainEntriesList/>
+                    <Route path="flags" view=DomainFlags/>
+                </Route>
+                <Route path="" view=NoDomainSelected/>
+            </Route>
+        </Routes>
     }
 }
 
 #[component]
-fn TopLevelRouter() -> impl IntoView {
-    view! {}
+fn GotoAdmin() -> impl IntoView {
+    view! { <A href="admin">"Go to the Admin site"</A> }
 }
 
 #[component]
