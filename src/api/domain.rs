@@ -1,5 +1,3 @@
-use std::collections::BTreeMap;
-
 use axum::{
     routing::{get, post},
     Extension, Json, Router,
@@ -8,7 +6,7 @@ use mailconfig::{
     models::{Authorisation, MailDomain, MailUser},
     Connection,
 };
-use serde::{Deserialize, Serialize};
+use serde::Deserialize;
 
 use crate::{api::APIError, state::AppState, tokens::Authorised};
 
@@ -17,21 +15,7 @@ use super::APIResult;
 mod entries;
 mod keys;
 
-#[derive(Serialize)]
-struct ListDomainResponse {
-    domains: BTreeMap<String, ListDomainResponseEntry>,
-}
-
-#[derive(Serialize)]
-#[serde(rename_all = "kebab-case")]
-struct ListDomainResponseEntry {
-    #[serde(skip_serializing_if = "Option::is_none")]
-    remote_mx: Option<String>,
-    sender_verify: bool,
-    grey_listing: bool,
-    virus_check: bool,
-    spamcheck_threshold: i32,
-}
+use api_types::domains::*;
 
 async fn list_domains(
     mut db: Connection,
@@ -56,24 +40,6 @@ async fn list_domains(
             .collect(),
     };
     Ok(ret.into())
-}
-
-#[derive(Debug, Deserialize)]
-#[serde(deny_unknown_fields, rename_all = "kebab-case")]
-struct SetDomainFlagsRequest {
-    domain_name: String,
-    #[serde(default)]
-    owner: Option<String>,
-    #[serde(default)]
-    remote_mx: Option<String>,
-    #[serde(default)]
-    sender_verify: Option<bool>,
-    #[serde(default)]
-    grey_listing: Option<bool>,
-    #[serde(default)]
-    virus_check: Option<bool>,
-    #[serde(default)]
-    spamcheck_threshold: Option<i32>,
 }
 
 async fn set_domain_flags(
