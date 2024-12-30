@@ -32,7 +32,7 @@ pub type Pool = diesel_async::pooled_connection::bb8::Pool<AsyncPgConnection>;
 lazy_static! {
     static ref MAKE_TLS_CONNECT: MakeRustlsConnect = {
         let mut store = RootCertStore::empty();
-        store.add_server_trust_anchors(webpki_roots::TLS_SERVER_ROOTS.0.iter().map(|ta| {
+        store.add_trust_anchors(webpki_roots::TLS_SERVER_ROOTS.0.iter().map(|ta| {
             rustls::OwnedTrustAnchor::from_subject_spki_name_constraints(
                 ta.subject,
                 ta.spki,
@@ -85,7 +85,7 @@ pub async fn create_pool(db_url: &str) -> Result<Pool, PoolError> {
         establish_connection,
     );
     bb8::Pool::builder()
-        .idle_timeout(Duration::from_secs(30).into())
+        .idle_timeout(Duration::from_secs(30))
         .connection_timeout(Duration::from_secs(10))
         .error_sink(Box::new(MyErrorSink))
         .build(config)
