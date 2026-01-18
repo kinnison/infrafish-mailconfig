@@ -2,7 +2,7 @@
   description = "Infrafish Mail Config";
 
   inputs = {
-    nixpkgs.url = "github:NixOS/nixpkgs/nixos-24.11";
+    nixpkgs.url = "github:NixOS/nixpkgs/nixos-25.05";
     flake-utils.url = "github:numtide/flake-utils";
   };
 
@@ -16,7 +16,12 @@
           src = ./.;
           cargoLock = { lockFile = ./Cargo.lock; };
 
-          nativeBuildInputs = with pkgs; [ postgresql ];
+          nativeBuildInputs = with pkgs; [
+            postgresql
+            libpq
+            libpq.pg_config
+            pkg-config
+          ];
         };
       in {
         packages = {
